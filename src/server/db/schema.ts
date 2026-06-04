@@ -18,10 +18,10 @@ const pk = () =>
     .$defaultFn(() => crypto.randomUUID());
 
 const timestamps = {
-  createdAt: timestamp("created_at", { withTimezone: true })
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
     .notNull()
     .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
@@ -58,7 +58,7 @@ export const users = pgTable("users", {
   id: pk(),
   name: text("name"),
   email: text("email").unique(),
-  emailVerified: timestamp("email_verified", { withTimezone: true }),
+  emailVerified: timestamp("email_verified", { withTimezone: true, mode: "date" }),
   image: text("image"), // avatar URL (from Discord)
   // App fields:
   role: userRole("role").notNull().default("client"),
@@ -94,7 +94,7 @@ export const sessions = pgTable("sessions", {
   userId: text("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { withTimezone: true }).notNull(),
+  expires: timestamp("expires", { withTimezone: true, mode: "date" }).notNull(),
 });
 
 export const verificationTokens = pgTable(
@@ -102,7 +102,7 @@ export const verificationTokens = pgTable(
   {
     identifier: text("identifier").notNull(),
     token: text("token").notNull(),
-    expires: timestamp("expires", { withTimezone: true }).notNull(),
+    expires: timestamp("expires", { withTimezone: true, mode: "date" }).notNull(),
   },
   (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })],
 );
@@ -154,8 +154,8 @@ export const availability = pgTable("availability", {
     .references(() => users.id, { onDelete: "cascade" }),
   type: availabilityType("type").notNull(),
   rule: jsonb("rule").$type<Record<string, unknown>>().notNull().default({}),
-  startsAt: timestamp("starts_at", { withTimezone: true }),
-  endsAt: timestamp("ends_at", { withTimezone: true }),
+  startsAt: timestamp("starts_at", { withTimezone: true, mode: "date" }),
+  endsAt: timestamp("ends_at", { withTimezone: true, mode: "date" }),
   ...timestamps,
 });
 
@@ -172,8 +172,8 @@ export const bookings = pgTable(
     serviceId: text("service_id")
       .notNull()
       .references(() => services.id, { onDelete: "restrict" }),
-    startAt: timestamp("start_at", { withTimezone: true }).notNull(),
-    endAt: timestamp("end_at", { withTimezone: true }).notNull(),
+    startAt: timestamp("start_at", { withTimezone: true, mode: "date" }).notNull(),
+    endAt: timestamp("end_at", { withTimezone: true, mode: "date" }).notNull(),
     status: bookingStatus("status").notNull().default("pending"),
     // The join key the Stripe webhook uses to find this booking idempotently.
     stripePaymentIntentId: text("stripe_payment_intent_id"),
@@ -199,12 +199,30 @@ export const payments = pgTable("payments", {
   ...timestamps,
 });
 
+// Client reviews of a completed session. One per booking.
+export const reviews = pgTable("reviews", {
+  id: pk(),
+  bookingId: text("booking_id")
+    .notNull()
+    .unique()
+    .references(() => bookings.id, { onDelete: "cascade" }),
+  clientId: text("client_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  coachId: text("coach_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  rating: integer("rating").notNull(), // 1..5
+  comment: text("comment"),
+  ...timestamps,
+});
+
 // Idempotency ledger: a Stripe event id is recorded here BEFORE its side
 // effects run, so replays/duplicates are no-ops.
 export const processedStripeEvents = pgTable("processed_stripe_events", {
   eventId: text("event_id").primaryKey(),
   type: text("type").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
     .notNull()
     .defaultNow(),
 });
@@ -219,10 +237,10 @@ export const jobs = pgTable("jobs", {
     .notNull()
     .default({}),
   status: jobStatus("status").notNull().default("pending"),
-  runAt: timestamp("run_at", { withTimezone: true }).notNull().defaultNow(),
+  runAt: timestamp("run_at", { withTimezone: true, mode: "date" }).notNull().defaultNow(),
   attempts: integer("attempts").notNull().default(0),
   maxAttempts: integer("max_attempts").notNull().default(5),
-  lockedAt: timestamp("locked_at", { withTimezone: true }),
+  lockedAt: timestamp("locked_at", { withTimezone: true, mode: "date" }),
   lastError: text("last_error"),
   ...timestamps,
 });
@@ -236,6 +254,7 @@ export type Availability = typeof availability.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
 export type NewBooking = typeof bookings.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
+export type Review = typeof reviews.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type NewJob = typeof jobs.$inferInsert;
 export type Role = (typeof userRole.enumValues)[number];

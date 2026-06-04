@@ -1,10 +1,15 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "../index";
 import { users, type Role, type User } from "../schema";
 
 export async function getUserById(id: string): Promise<User | undefined> {
   const [row] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return row;
+}
+
+/** All users, newest first. Admin-only listing. */
+export async function listUsers(): Promise<User[]> {
+  return db.select().from(users).orderBy(desc(users.createdAt));
 }
 
 export async function getUserByDiscordId(

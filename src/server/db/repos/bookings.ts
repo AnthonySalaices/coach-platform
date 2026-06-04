@@ -1,11 +1,60 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { db } from "../index";
 import {
   bookings,
+  services,
+  users,
   type Booking,
   type BookingStatus,
   type NewBooking,
 } from "../schema";
+
+export interface BookingDetail {
+  id: string;
+  status: BookingStatus;
+  startAt: Date;
+  endAt: Date;
+  clientName: string | null;
+  coachName: string | null;
+  serviceTitle: string;
+  price: number;
+  currency: string;
+}
+
+/**
+ * Bookings enriched with client/coach/service names for display. Filter by
+ * client or coach for the respective dashboards; omit both for the admin view.
+ */
+export async function listBookingsDetailed(
+  opts: { clientId?: string; coachId?: string } = {},
+): Promise<BookingDetail[]> {
+  const clientU = alias(users, "client_u");
+  const coachU = alias(users, "coach_u");
+
+  const filters = [];
+  if (opts.clientId) filters.push(eq(bookings.clientId, opts.clientId));
+  if (opts.coachId) filters.push(eq(bookings.coachId, opts.coachId));
+
+  return db
+    .select({
+      id: bookings.id,
+      status: bookings.status,
+      startAt: bookings.startAt,
+      endAt: bookings.endAt,
+      clientName: clientU.name,
+      coachName: coachU.name,
+      serviceTitle: services.title,
+      price: services.price,
+      currency: services.currency,
+    })
+    .from(bookings)
+    .innerJoin(clientU, eq(bookings.clientId, clientU.id))
+    .innerJoin(coachU, eq(bookings.coachId, coachU.id))
+    .innerJoin(services, eq(bookings.serviceId, services.id))
+    .where(filters.length ? and(...filters) : undefined)
+    .orderBy(desc(bookings.startAt));
+}
 
 export async function getBookingById(id: string): Promise<Booking | undefined> {
   const [row] = await db

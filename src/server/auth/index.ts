@@ -45,17 +45,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    async signIn({ user, account }) {
-      // First Discord sign-in: record the Discord id on our user row.
-      if (
-        account?.provider === "discord" &&
-        user.id &&
-        account.providerAccountId
-      ) {
-        await setDiscordIdIfMissing(user.id, account.providerAccountId);
-      }
-      return true;
-    },
     async jwt({ token, user }) {
       // `user` is only present at sign-in — read the authoritative role once
       // and bake it into the token so steady-state requests hit no DB.
@@ -71,6 +60,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = (token.role as Role | undefined) ?? "client";
       }
       return session;
+    },
+  },
+  events: {
+    // Runs after an OAuth account is linked to a user. Here `user.id` is our DB
+    // id (unlike the signIn callback on first login, where `user.id` is the
+    // Discord snowflake — which is why the old backfill silently matched no
+    // rows). This reliably records the denormalized discord_id.
+    async linkAccount({ user, account }) {
+      if (account.provider === "discord" && user.id) {
+        await setDiscordIdIfMissing(user.id, account.providerAccountId);
+      }
     },
   },
 });
