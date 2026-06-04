@@ -1,0 +1,11 @@
+# Automatic HTTPS. Caddy fetches & renews a Let's Encrypt certificate for
+# $DOMAIN on its own — nothing else to configure. For local testing set
+# DOMAIN=localhost (Caddy serves an internal self-signed cert).
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
