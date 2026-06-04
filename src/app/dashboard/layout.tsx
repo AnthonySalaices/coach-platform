@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getIdentity } from "@/lib/page-auth";
 import { stopViewAs } from "@/lib/view-as-actions";
+import { getSiteName } from "@/server/db/repos/settings";
+import { Avatar } from "@/components/Avatar";
 
 export default async function DashboardLayout({
   children,
@@ -9,6 +11,7 @@ export default async function DashboardLayout({
 }) {
   const { user, impersonating } = await getIdentity();
   const role = user.role;
+  const siteName = await getSiteName();
 
   return (
     <div>
@@ -27,9 +30,10 @@ export default async function DashboardLayout({
       )}
       <header className="topbar">
         <Link className="brand" href="/dashboard" style={{ color: "var(--fg)" }}>
-          Coaching Platform
+          <span style={{ color: "var(--accent)" }}>⚡</span> {siteName}
         </Link>
         <div className="who">
+          <Avatar name={user.name} image={user.image} size={28} />
           <span>{user.name ?? user.email}</span>
           <span className={`badge ${role}`}>{role}</span>
           <Link className="btn" href="/api/auth/signout" prefetch={false}>
@@ -73,6 +77,9 @@ export default async function DashboardLayout({
               </Link>
               <Link className="nav-link" href="/dashboard/admin/bookings">
                 All bookings
+              </Link>
+              <Link className="nav-link" href="/dashboard/admin/settings">
+                Settings
               </Link>
             </>
           )}

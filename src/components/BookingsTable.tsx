@@ -1,4 +1,4 @@
-import { fmtDateTime } from "@/lib/format";
+import { LocalTime } from "@/components/LocalTime";
 import { formatMoney } from "@/lib/money";
 import type { BookingDetail } from "@/server/db/repos/bookings";
 
@@ -24,7 +24,9 @@ export function BookingsTable({
       <tbody>
         {rows.map((b) => (
           <tr key={b.id}>
-            <td>{fmtDateTime(b.startAt)}</td>
+            <td>
+              <LocalTime value={b.startAt.toISOString()} mode="full" />
+            </td>
             {columns.client && <td>{b.clientName ?? "—"}</td>}
             {columns.coach && <td>{b.coachName ?? "—"}</td>}
             <td>{b.serviceTitle}</td>

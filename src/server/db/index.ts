@@ -20,3 +20,6 @@ if (env.NODE_ENV !== "production") {
 export const db = drizzle(client, { schema });
 export { schema };
 export type Database = typeof db;
+
+/** A transaction handle (same query API as `db`). */
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];

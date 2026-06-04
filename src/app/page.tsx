@@ -3,7 +3,9 @@ import { auth } from "@/server/auth";
 import { listCoaches, type CoachListing } from "@/server/db/repos/coachProfiles";
 import { listServicesByCoach } from "@/server/db/repos/services";
 import { getCoachRatings, type CoachRating } from "@/server/db/repos/reviews";
+import { getSiteName } from "@/server/db/repos/settings";
 import { formatMoney } from "@/lib/money";
+import { Avatar } from "@/components/Avatar";
 import type { Service } from "@/server/db/schema";
 
 interface CoachCardData {
@@ -15,6 +17,7 @@ interface CoachCardData {
 export default async function Home() {
   const session = await auth();
   const signedIn = Boolean(session?.user);
+  const siteName = await getSiteName();
 
   const coaches = await listCoaches();
   const ratings = await getCoachRatings(coaches.map((c) => c.userId));
@@ -41,7 +44,9 @@ export default async function Home() {
   return (
     <div>
       <nav className="landing-nav">
-        <span className="brand">⚡ GG Coach</span>
+        <span className="brand">
+          <span style={{ color: "var(--accent)" }}>⚡</span> {siteName}
+        </span>
         <div className="nav-actions">
           <a href="#coaches" className="nav-ghost">
             Browse coaches
@@ -133,7 +138,29 @@ export default async function Home() {
                 return (
                   <div className="coach-card" key={coach.userId}>
                     <div className="coach-card-top">
-                      <strong>{coach.name}</strong>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.6rem",
+                          minWidth: 0,
+                        }}
+                      >
+                        <Avatar
+                          name={coach.name}
+                          image={coach.image}
+                          size={40}
+                        />
+                        <strong
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {coach.name}
+                        </strong>
+                      </div>
                       {rating ? (
                         <span className="stars" title={`${rating.avg.toFixed(1)}/5`}>
                           ★ {rating.avg.toFixed(1)}{" "}
@@ -161,12 +188,12 @@ export default async function Home() {
                         className="btn-primary sm"
                         href={
                           signedIn
-                            ? "/dashboard/coaches"
-                            : "/api/auth/signin?callbackUrl=/dashboard/coaches"
+                            ? `/dashboard/coaches/${coach.userId}`
+                            : `/api/auth/signin?callbackUrl=/dashboard/coaches/${coach.userId}`
                         }
                         prefetch={false}
                       >
-                        {signedIn ? "View" : "Sign in to book"}
+                        {signedIn ? "View & book" : "Sign in to book"}
                       </Link>
                     </div>
                   </div>
@@ -179,7 +206,7 @@ export default async function Home() {
 
       <footer className="landing-footer">
         <span className="muted">
-          ⚡ GG Coach — open-source, self-hosted coaching.
+          ⚡ {siteName} — open-source, self-hosted coaching.
         </span>
         <a
           className="muted"

@@ -1,13 +1,15 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "../index";
 import {
   bookings,
+  payments,
   services,
   users,
   type Booking,
   type BookingStatus,
   type NewBooking,
+  type PaymentStatusValue,
 } from "../schema";
 
 export interface BookingDetail {
@@ -75,6 +77,74 @@ export async function getBookingByPaymentIntentId(
     .where(eq(bookings.stripePaymentIntentId, paymentIntentId))
     .limit(1);
   return row;
+}
+
+export interface BookingFull {
+  id: string;
+  status: BookingStatus;
+  startAt: Date;
+  endAt: Date;
+  clientId: string;
+  coachId: string;
+  clientName: string | null;
+  coachName: string | null;
+  serviceTitle: string;
+  price: number;
+  currency: string;
+  discordChannelId: string | null;
+  paymentStatus: PaymentStatusValue | null;
+  refundedAmount: number | null;
+}
+
+/** Full booking detail (names + payment) for the booking detail page. */
+export async function getBookingDetailById(
+  id: string,
+): Promise<BookingFull | undefined> {
+  const clientU = alias(users, "client_detail");
+  const coachU = alias(users, "coach_detail");
+  const [row] = await db
+    .select({
+      id: bookings.id,
+      status: bookings.status,
+      startAt: bookings.startAt,
+      endAt: bookings.endAt,
+      clientId: bookings.clientId,
+      coachId: bookings.coachId,
+      clientName: clientU.name,
+      coachName: coachU.name,
+      serviceTitle: services.title,
+      price: services.price,
+      currency: services.currency,
+      discordChannelId: bookings.discordChannelId,
+      paymentStatus: payments.status,
+      refundedAmount: payments.refundedAmount,
+    })
+    .from(bookings)
+    .innerJoin(clientU, eq(bookings.clientId, clientU.id))
+    .innerJoin(coachU, eq(bookings.coachId, coachU.id))
+    .innerJoin(services, eq(bookings.serviceId, services.id))
+    .leftJoin(payments, eq(payments.bookingId, bookings.id))
+    .where(eq(bookings.id, id))
+    .limit(1);
+  return row;
+}
+
+/** A coach's pending/confirmed bookings ending at/after `from` — these block
+ * slots in the scheduler. */
+export async function listActiveBookingTimesByCoach(
+  coachId: string,
+  from: Date,
+): Promise<{ startAt: Date; endAt: Date }[]> {
+  return db
+    .select({ startAt: bookings.startAt, endAt: bookings.endAt })
+    .from(bookings)
+    .where(
+      and(
+        eq(bookings.coachId, coachId),
+        inArray(bookings.status, ["pending", "confirmed"]),
+        gte(bookings.endAt, from),
+      ),
+    );
 }
 
 export async function createBooking(input: NewBooking): Promise<Booking> {

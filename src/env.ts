@@ -48,12 +48,26 @@ const serverSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((v) => v === "true"),
+
+  // DEV ONLY: skip Stripe and instantly confirm bookings (to demo the flow
+  // without real keys). Hard-disabled when NODE_ENV=production — see usage.
+  DEV_BYPASS_PAYMENTS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+
+  // Comma-separated Discord user ids that are auto-granted admin on sign-in.
+  // Use it to bootstrap the first admin of a fresh instance.
+  ADMIN_DISCORD_IDS: z.string().optional(),
 });
 
 const publicSchema = z.object({
   // The app's public origin, e.g. https://coach.example.com. Used to build
   // Stripe success/cancel URLs and absolute links.
   NEXT_PUBLIC_APP_URL: z.string().url(),
+  // Default site/brand name. The admin can override this in-app (Settings),
+  // which takes precedence over this default.
+  NEXT_PUBLIC_SITE_NAME: z.string().default("GG Coach"),
 });
 
 const fullSchema = serverSchema.and(publicSchema);

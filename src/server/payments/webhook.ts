@@ -1,19 +1,17 @@
 import type Stripe from "stripe";
 import { db } from "@/server/db";
 import { processedStripeEvents } from "@/server/db/schema";
+import { confirmBookingPaid, refundBooking } from "./fulfillment";
 
 /**
  * Process a *verified* Stripe event exactly once.
  *
- * Idempotency: inside a single transaction we first claim the event id in
+ * Idempotency: inside one transaction we claim the event id in
  * `processed_stripe_events` (`onConflictDoNothing`). If the row already existed
  * the event is a duplicate/replay and we no-op. Because the claim and the side
- * effects share one transaction, a handler failure rolls back the claim too, so
- * Stripe's retry will reprocess cleanly — never a half-applied event.
- *
- * Booking side effects are STUBBED for now (logged, not written). When wired,
- * the handlers must use the provided `tx` so they commit atomically with the
- * idempotency record.
+ * effects share the transaction, a handler failure rolls back the claim too, so
+ * Stripe's retry reprocesses cleanly — never a half-applied event. The
+ * fulfillment helpers are themselves idempotent as a second line of defense.
  */
 export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
   await db.transaction(async (tx) => {
@@ -23,10 +21,7 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
       .onConflictDoNothing()
       .returning({ eventId: processedStripeEvents.eventId });
 
-    if (claimed.length === 0) {
-      // Already processed — idempotent no-op.
-      return;
-    }
+    if (claimed.length === 0) return; // already processed
 
     switch (event.type) {
       case "checkout.session.completed": {
@@ -36,39 +31,49 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
           typeof session.payment_intent === "string"
             ? session.payment_intent
             : (session.payment_intent?.id ?? null);
-        // TODO(booking wiring): within `tx`, attach the PaymentIntent to the
-        // booking, mark it `confirmed`, and upsert the payment row.
-        log("checkout.session.completed", { bookingId, paymentIntentId });
+        if (bookingId && paymentIntentId && session.payment_status === "paid") {
+          await confirmBookingPaid(tx, {
+            bookingId,
+            paymentIntentId,
+            amount: session.amount_total ?? 0,
+            currency: session.currency ?? "usd",
+          });
+        }
         break;
       }
+
       case "payment_intent.succeeded": {
         const pi = event.data.object;
-        // TODO(booking wiring): find booking by PI id, mark `confirmed`,
-        // enqueue Discord channel provisioning.
-        log("payment_intent.succeeded", { paymentIntentId: pi.id });
+        const bookingId = pi.metadata?.bookingId;
+        if (bookingId) {
+          await confirmBookingPaid(tx, {
+            bookingId,
+            paymentIntentId: pi.id,
+            amount: pi.amount_received || pi.amount || 0,
+            currency: pi.currency ?? "usd",
+          });
+        }
         break;
       }
+
       case "charge.refunded": {
         const charge = event.data.object;
         const paymentIntentId =
           typeof charge.payment_intent === "string"
             ? charge.payment_intent
             : (charge.payment_intent?.id ?? null);
-        // TODO(booking wiring): record refund amount, transition booking →
-        // `refunded` (or keep `confirmed` on partial), within `tx`.
-        log("charge.refunded", {
-          paymentIntentId,
-          amountRefunded: charge.amount_refunded,
-        });
+        if (paymentIntentId) {
+          await refundBooking(tx, {
+            paymentIntentId,
+            refundedAmount: charge.amount_refunded,
+          });
+        }
         break;
       }
+
       default:
         // Unknown/uninteresting event types are acknowledged without action.
         break;
     }
   });
-}
-
-function log(event: string, data: Record<string, unknown>): void {
-  console.log(`[stripe] ${event}`, data);
 }

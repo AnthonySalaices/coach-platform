@@ -19,6 +19,7 @@ body {
   background: var(--bg);
   color: var(--fg);
   font-family:
+    var(--font-body),
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -26,6 +27,38 @@ body {
     Roboto,
     sans-serif;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* subtle ambient color so large dark areas don't feel flat */
+body {
+  background-image:
+    radial-gradient(
+      900px 500px at 100% -10%,
+      rgba(88, 101, 242, 0.08),
+      transparent 60%
+    ),
+    radial-gradient(
+      700px 500px at -10% 0%,
+      rgba(124, 77, 255, 0.06),
+      transparent 55%
+    );
+  background-attachment: fixed;
+}
+
+h1,
+h2,
+h3,
+.brand,
+.hero-title,
+.section-title,
+.page,
+.stat .n,
+.game-pill {
+  font-family:
+    var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 a {
@@ -43,6 +76,10 @@ a {
 }
 .topbar .brand {
   font-weight: 700;
+  text-decoration: none;
+}
+.topbar .brand:hover {
+  text-decoration: none;
 }
 .topbar .who {
   display: flex;
@@ -234,6 +271,98 @@ h1.page {
 }
 textarea.input {
   resize: vertical;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0.85rem 0 0;
+}
+.kv dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.kv dd {
+  margin: 0;
+}
+
+.avail-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.avail-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.4rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.avail-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.9rem;
+  max-width: 520px;
+}
+.avail-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+.avail-form .input {
+  width: auto;
+}
+.btn-x {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 0.3rem;
+}
+.btn-x:hover {
+  color: #e5707e;
+}
+
+/* slot picker on the coach profile */
+.slot-day {
+  margin-top: 0.6rem;
+}
+.slot-day-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
+.slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.slot-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  border-radius: 8px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.slot-btn:hover {
+  border-color: var(--accent);
+  background: rgba(88, 101, 242, 0.12);
 }
 
 /* ── public landing ──────────────────────────────────────────────────────── */

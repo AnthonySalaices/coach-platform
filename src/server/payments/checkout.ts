@@ -34,8 +34,8 @@ export async function createCheckoutSession(
     customer_email: input.clientEmail,
     metadata: { bookingId: input.bookingId },
     payment_intent_data: { metadata: { bookingId: input.bookingId } },
-    success_url: `${env.NEXT_PUBLIC_APP_URL}/bookings/${input.bookingId}?status=success`,
-    cancel_url: `${env.NEXT_PUBLIC_APP_URL}/bookings/${input.bookingId}?status=cancelled`,
+    success_url: `${env.NEXT_PUBLIC_APP_URL}/dashboard/bookings/${input.bookingId}?status=success`,
+    cancel_url: `${env.NEXT_PUBLIC_APP_URL}/dashboard/bookings/${input.bookingId}?status=cancelled`,
   });
 
   if (!session.url) {

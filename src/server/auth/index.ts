@@ -9,10 +9,22 @@ import {
   users,
   verificationTokens,
 } from "@/server/db/schema";
-import { getUserById, setDiscordIdIfMissing } from "@/server/db/repos/users";
+import {
+  getUserById,
+  setDiscordIdIfMissing,
+  setUserRole,
+} from "@/server/db/repos/users";
 import type { Role } from "@/server/db/schema";
 
 const useSecureCookies = env.NODE_ENV === "production";
+
+// Discord ids that should always be admin (bootstraps the first admin).
+const ADMIN_DISCORD_IDS = new Set(
+  (env.ADMIN_DISCORD_IDS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean),
+);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -45,12 +57,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       // `user` is only present at sign-in — read the authoritative role once
       // and bake it into the token so steady-state requests hit no DB.
       if (user?.id) {
         const dbUser = await getUserById(user.id);
-        token.role = dbUser?.role ?? "client";
+        let role: Role = dbUser?.role ?? "client";
+
+        // Auto-grant admin to allowlisted Discord ids.
+        const discordId =
+          account?.provider === "discord"
+            ? account.providerAccountId
+            : (dbUser?.discordId ?? undefined);
+        if (role !== "admin" && discordId && ADMIN_DISCORD_IDS.has(discordId)) {
+          await setUserRole(user.id, "admin");
+          role = "admin";
+        }
+        token.role = role;
       }
       return token;
     },

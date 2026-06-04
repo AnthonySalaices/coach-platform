@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { requirePageRole } from "@/lib/page-auth";
 import { listBookingsDetailed } from "@/server/db/repos/bookings";
 import { listReviewsByClient } from "@/server/db/repos/reviews";
-import { fmtDateTime } from "@/lib/format";
+import { LocalTime } from "@/components/LocalTime";
 import { formatMoney } from "@/lib/money";
 import { leaveReview } from "./actions";
 
@@ -32,23 +33,31 @@ export default async function ClientPage() {
               <th>Service</th>
               <th>Price</th>
               <th>Status</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {upcoming.map((b) => (
               <tr key={b.id}>
-                <td>{fmtDateTime(b.startAt)}</td>
+                <td>
+                  <LocalTime value={b.startAt.toISOString()} mode="full" />
+                </td>
                 <td>{b.coachName ?? "—"}</td>
                 <td>{b.serviceTitle}</td>
                 <td>{formatMoney(b.price, b.currency)}</td>
                 <td>
                   <span className={`badge ${b.status}`}>{b.status}</span>
                 </td>
+                <td style={{ textAlign: "right" }}>
+                  <Link href={`/dashboard/bookings/${b.id}`} className="muted">
+                    View →
+                  </Link>
+                </td>
               </tr>
             ))}
             {upcoming.length === 0 && (
               <tr>
-                <td colSpan={5} className="muted">
+                <td colSpan={6} className="muted">
                   No upcoming sessions.
                 </td>
               </tr>
@@ -81,7 +90,7 @@ export default async function ClientPage() {
                     <strong>{b.serviceTitle}</strong>{" "}
                     <span className="muted">with {b.coachName}</span>
                     <div className="muted" style={{ fontSize: "0.82rem" }}>
-                      {fmtDateTime(b.startAt)}
+                      <LocalTime value={b.startAt.toISOString()} mode="full" />
                     </div>
                   </div>
                   <span className={`badge ${b.status}`}>{b.status}</span>

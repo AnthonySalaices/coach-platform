@@ -1,6 +1,6 @@
 import { requirePageRole } from "@/lib/page-auth";
 import { listUsers } from "@/server/db/repos/users";
-import { fmtDateTime } from "@/lib/format";
+import { LocalTime } from "@/components/LocalTime";
 import { changeRole } from "./actions";
 import { startViewAs } from "@/lib/view-as-actions";
 
@@ -35,7 +35,9 @@ export default async function AdminUsersPage() {
                   {u.id === me.id && <span className="muted"> (you)</span>}
                 </td>
                 <td className="muted">{u.email ?? "—"}</td>
-                <td className="muted">{fmtDateTime(u.createdAt)}</td>
+                <td className="muted">
+                  <LocalTime value={u.createdAt.toISOString()} mode="datetime" />
+                </td>
                 <td>
                   <span className={`badge ${u.role}`}>{u.role}</span>
                 </td>

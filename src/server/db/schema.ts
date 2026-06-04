@@ -227,6 +227,16 @@ export const processedStripeEvents = pgTable("processed_stripe_events", {
     .defaultNow(),
 });
 
+// Editable app settings (key/value), e.g. the site name.
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 // DB-backed job queue (no Redis). Workers claim rows with
 // `FOR UPDATE SKIP LOCKED`, so multiple app instances are safe.
 export const jobs = pgTable("jobs", {
