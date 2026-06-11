@@ -37,10 +37,15 @@ const serverSchema = z.object({
     .string()
     .startsWith("whsec_", "STRIPE_WEBHOOK_SECRET must start with whsec_"),
 
-  // Discord bot (provisioning) — optional: the bot module is a stub for now,
-  // so the app runs without it. Required only once provisioning is enabled.
+  // Discord bot (session provisioning) — optional: without a token the app
+  // runs fine and provisioning jobs no-op. With it, the bot creates a private
+  // text channel per booking, adds the client at session start, and spins up
+  // a session voice channel. Needs: Manage Channels, Manage Roles, Create
+  // Invite, View/Send in the guild.
   DISCORD_BOT_TOKEN: z.string().min(1).optional(),
   DISCORD_GUILD_ID: z.string().min(1).optional(),
+  // Optional category (channel folder) id to create session channels under.
+  DISCORD_SESSIONS_CATEGORY_ID: z.string().min(1).optional(),
 
   // In-process job worker. Default on; set RUN_WORKER=false on instances that
   // should only serve HTTP (e.g. when running a dedicated worker elsewhere).

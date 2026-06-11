@@ -14,4 +14,14 @@ export async function register(): Promise<void> {
     const { startWorker } = await import("@/server/jobs/worker");
     startWorker();
   }
+
+  // Log the bot in at boot (when configured) so its button interactions work
+  // even before the first provisioning job runs.
+  if (
+    process.env.NEXT_RUNTIME === "nodejs" &&
+    !process.env.SKIP_ENV_VALIDATION
+  ) {
+    const { startDiscordBot } = await import("@/server/discord/client");
+    await startDiscordBot();
+  }
 }

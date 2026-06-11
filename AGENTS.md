@@ -23,7 +23,7 @@ Repo: `github.com/AnthonySalaices/coach-platform` (public, MIT). Single Next.js 
   (thin data layer) so a future SQLite "solo mode" is a driver swap. Parameterized
   queries only — never string-built SQL.
 - **Auth.js v5** (Discord OAuth, **JWT** sessions). **Stripe** hosted Checkout.
-  **discord.js** (provisioning stub). **Zod** at every API/action boundary.
+  **discord.js** (session channel bot). **Zod** at every API/action boundary.
 - **Money** is always integer **minor units** + a currency code. Never floats.
 - **Time** is stored/computed in **UTC** end-to-end; it's rendered in the viewer's
   **browser timezone** by client components. See "Timezone" below.
@@ -66,7 +66,7 @@ src/
     auth/ index.ts (Auth.js config) · guards.ts (requireUser/Role + booking authz)
     payments/ stripe.ts (lazy) · checkout.ts · fulfillment.ts (tx-aware) · webhook.ts
     scheduling/ slots.ts (computeSlots + availableSlotsForService + isSlotAvailable)
-    discord/ client.ts · provisioning.ts (STUBS)
+    discord/ client.ts (lazy gateway bot) · provisioning.ts · interactions.ts
     jobs/ queue.ts (FOR UPDATE SKIP LOCKED) · worker.ts · handlers.ts
     validation/ zod schemas
 drizzle/                  generated migrations
@@ -135,9 +135,30 @@ Dockerfile · docker-compose.yml · Caddyfile · .env.example
 - DB-backed queue, claimed with `SELECT … FOR UPDATE SKIP LOCKED` so every app replica
   can run the in-process worker safely (no Redis). Worker starts from
   `instrumentation.ts` behind `RUN_WORKER`.
-- `discord.provisionChannel` handler exists but **no-ops when Discord isn't configured**
-  (`isDiscordConfigured()`); the actual channel creation in `discord/provisioning.ts`
-  is still a STUB.
+- Every `discord.*` handler **no-ops when Discord isn't configured**
+  (`isDiscordConfigured()`), so the queue stays green without a bot.
+- **Session lifecycle** (all in `discord/provisioning.ts`, driven by jobs):
+  - `discord.provisionChannel` (enqueued by fulfillment on the pending→confirmed
+    transition): creates a private text channel (`session-<id8>`, coach + bot only;
+    under `DISCORD_SESSIONS_CATEGORY_ID` if set), posts the booking briefing embed
+    with an **"add client" button**, persists `bookings.discord_channel_id`, then
+    enqueues `discord.sessionStart` with `runAt = start_at`.
+  - The button (customId `cp:addclient:<bookingId>`, handled in
+    `discord/interactions.ts` via the gateway) lets **only the coach** open the
+    channel to the client early. Overwrites are created from a fetched `User`, so
+    they work before the client joins the guild; if the client isn't a member yet
+    the coach gets an ephemeral one-off **invite link** to pass along.
+  - `discord.sessionStart` (at start time; skips cancelled/refunded or already-ended
+    bookings): ensures client access, creates a **private voice channel** (reused on
+    retry via `bookings.discord_voice_channel_id`), pings both participants with a
+    kickoff embed linking `<#voice>`, and enqueues `discord.sessionEnd` at
+    `end_at + 30min`.
+  - `discord.sessionEnd`: deletes the voice channel; if people are still connected
+    it re-enqueues itself every 30min until a 6h hard cap, then force-deletes. The
+    text channel stays (follow-ups/homework).
+- The bot logs in eagerly at boot from `instrumentation.ts` (`startDiscordBot()`)
+  so the button works after restarts; everywhere else the client stays lazy.
+  Needed guild perms: Manage Channels, Manage Roles, Create Invite, View, Send.
 
 ## Security non-negotiables
 
@@ -151,7 +172,7 @@ Dockerfile · docker-compose.yml · Caddyfile · .env.example
 `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`/`AUTH_TRUST_HOST`, `AUTH_DISCORD_ID/SECRET`,
 `ADMIN_DISCORD_IDS`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SITE_NAME`, `DISCORD_BOT_TOKEN`,
-`DISCORD_GUILD_ID`, `RUN_WORKER`, `DEV_BYPASS_PAYMENTS` (dev only), `DOMAIN`,
+`DISCORD_GUILD_ID`, `DISCORD_SESSIONS_CATEGORY_ID` (optional), `RUN_WORKER`, `DEV_BYPASS_PAYMENTS` (dev only), `DOMAIN`,
 `ACME_EMAIL`, Postgres creds for compose.
 
 ## Deploy / dev

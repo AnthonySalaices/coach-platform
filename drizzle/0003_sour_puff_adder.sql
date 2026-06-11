@@ -1,0 +1,1 @@
+ALTER TABLE "bookings" ADD COLUMN "discord_voice_channel_id" text;

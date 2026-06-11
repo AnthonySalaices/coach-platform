@@ -178,6 +178,7 @@ export const bookings = pgTable(
     // The join key the Stripe webhook uses to find this booking idempotently.
     stripePaymentIntentId: text("stripe_payment_intent_id"),
     discordChannelId: text("discord_channel_id"),
+    discordVoiceChannelId: text("discord_voice_channel_id"),
     ...timestamps,
   },
   (b) => [

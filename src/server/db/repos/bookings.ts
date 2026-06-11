@@ -79,6 +79,53 @@ export async function getBookingByPaymentIntentId(
   return row;
 }
 
+/** Everything the Discord bot needs to provision/run a session. */
+export interface BookingDiscordInfo {
+  id: string;
+  status: BookingStatus;
+  startAt: Date;
+  endAt: Date;
+  serviceTitle: string;
+  price: number;
+  currency: string;
+  discordChannelId: string | null;
+  discordVoiceChannelId: string | null;
+  clientName: string | null;
+  clientDiscordId: string | null;
+  coachName: string | null;
+  coachDiscordId: string | null;
+}
+
+export async function getBookingDiscordInfo(
+  id: string,
+): Promise<BookingDiscordInfo | undefined> {
+  const clientU = alias(users, "client_d");
+  const coachU = alias(users, "coach_d");
+  const [row] = await db
+    .select({
+      id: bookings.id,
+      status: bookings.status,
+      startAt: bookings.startAt,
+      endAt: bookings.endAt,
+      serviceTitle: services.title,
+      price: services.price,
+      currency: services.currency,
+      discordChannelId: bookings.discordChannelId,
+      discordVoiceChannelId: bookings.discordVoiceChannelId,
+      clientName: clientU.name,
+      clientDiscordId: clientU.discordId,
+      coachName: coachU.name,
+      coachDiscordId: coachU.discordId,
+    })
+    .from(bookings)
+    .innerJoin(clientU, eq(bookings.clientId, clientU.id))
+    .innerJoin(coachU, eq(bookings.coachId, coachU.id))
+    .innerJoin(services, eq(bookings.serviceId, services.id))
+    .where(eq(bookings.id, id))
+    .limit(1);
+  return row;
+}
+
 export interface BookingFull {
   id: string;
   status: BookingStatus;
@@ -176,5 +223,15 @@ export async function setBookingDiscordChannel(
   await db
     .update(bookings)
     .set({ discordChannelId })
+    .where(eq(bookings.id, id));
+}
+
+export async function setBookingDiscordVoiceChannel(
+  id: string,
+  discordVoiceChannelId: string | null,
+): Promise<void> {
+  await db
+    .update(bookings)
+    .set({ discordVoiceChannelId })
     .where(eq(bookings.id, id));
 }
