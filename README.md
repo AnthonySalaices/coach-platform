@@ -4,9 +4,32 @@ An open-source, **self-hostable** coaching platform for gamers. You run your own
 instance — one instance is one coaching business. The project authors never host
 it and never touch your money: payments go straight to **your** Stripe account.
 
-> **Status: foundation scaffold.** The skeleton is wired up — auth, payments,
-> data model, background jobs, and the deployment shell. Feature UIs (coach &
-> client dashboards, the booking flow, scheduling) are not built yet.
+> **Status: fully working.** Booking, payments, scheduling, dashboards, the
+> Discord session bot, and admin customization are all live. Still on the
+> wishlist: per-coach timezones and email notifications.
+
+## What you get
+
+- **Public landing page** with your coach roster, bookable services and a
+  "tactical terminal" look — every color, the logo, and every line of text is
+  editable from the admin settings, no rebuild needed.
+- **Discord sign-in** on a branded page (clients book with the same account
+  they'll be coached on), with role-based client / coach / admin dashboards.
+- **Booking & scheduling** — coaches set weekly availability windows; clients
+  pick from real open slots (timezone-aware, conflict-checked) and pay through
+  Stripe-hosted Checkout. Refunds flow back automatically via webhook.
+- **A Discord bot that runs the session**: when a booking is paid it creates a
+  private text channel for the coach with the booking briefing and a button to
+  optionally let the client in early; at start time it adds the client, pings
+  both, and opens a private voice channel only the two of them can see; after
+  the session it cleans the voice channel up (once it's empty) and leaves the
+  text channel for follow-ups. Clients who aren't in your server yet get an
+  invite link handled for you.
+- **Admin tools** — manage users/roles, view all bookings, impersonate ("view
+  as") for support, rebrand the site (name, logo, full color scheme, all site
+  copy), and a **step-by-step bot demo page** that walks the whole Discord
+  lifecycle on a throwaway booking so you can see each stage fire for real.
+- **Reviews** — clients rate sessions; ratings show on the public roster.
 
 ## Stack
 
@@ -15,7 +38,7 @@ it and never touch your money: payments go straight to **your** Stripe account.
   mode" can be added later)
 - **Auth.js** with **Discord** login, stateless **JWT** sessions
 - **Stripe** hosted Checkout + a signature-verified, idempotent webhook
-- **discord.js** bot module for per-session channels/roles _(stubbed for now)_
+- **discord.js** bot for private per-session text/voice channels
 - **DB-backed** background jobs (no Redis)
 - **Docker Compose** (app + Postgres) behind **Caddy** for automatic HTTPS
 
@@ -43,14 +66,22 @@ Open `.env` and fill in every value. You'll need accounts for:
   <https://discord.com/developers/applications>, grab the OAuth2 **Client ID**
   and **Client Secret**, and add the redirect URL
   `https://YOUR-DOMAIN/api/auth/callback/discord`.
+- **Discord bot** (same application, optional but recommended — it powers the
+  session channels): on the **Bot** tab, reset & copy the **token** into
+  `DISCORD_BOT_TOKEN`. Invite the bot to your server via
+  `https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&scope=bot&permissions=268438545`
+  (Manage Channels, Manage Roles, Create Invite, View, Send) and put your
+  server id in `DISCORD_GUILD_ID`. Optionally set
+  `DISCORD_SESSIONS_CATEGORY_ID` to keep session channels under one category.
+  Verify it end-to-end from **Dashboard → Admin → Discord bot**.
 - **Stripe** — from the Dashboard, copy your **secret key**, then add a webhook
   endpoint at `https://YOUR-DOMAIN/api/webhooks/stripe` and copy its **signing
   secret**.
 - A strong `AUTH_SECRET` — generate one with `openssl rand -base64 33`.
 - Set `DOMAIN`, `ACME_EMAIL`, and `NEXT_PUBLIC_APP_URL` to your domain.
 
-> The `DISCORD_BOT_TOKEN` / `DISCORD_GUILD_ID` are optional for now — the bot is
-> a stub. Everything else is required.
+> Without `DISCORD_BOT_TOKEN` / `DISCORD_GUILD_ID` everything else still works —
+> session channels just don't get created. Everything else is required.
 
 ### 3. Point your domain at the server
 
