@@ -21,6 +21,10 @@ export async function setSetting(key: string, value: string): Promise<void> {
     .onConflictDoUpdate({ target: settings.key, set: { value } });
 }
 
+export async function deleteSetting(key: string): Promise<void> {
+  await db.delete(settings).where(eq(settings.key, key));
+}
+
 /** The site/brand name: admin-set value if present, else the env default.
  * Resilient to the DB being unavailable (e.g. during `next build`). */
 export async function getSiteName(): Promise<string> {

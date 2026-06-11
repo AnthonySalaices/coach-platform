@@ -4,6 +4,7 @@ import { listCoaches, type CoachListing } from "@/server/db/repos/coachProfiles"
 import { listServicesByCoach } from "@/server/db/repos/services";
 import { getCoachRatings, type CoachRating } from "@/server/db/repos/reviews";
 import { getSiteName } from "@/server/db/repos/settings";
+import { getSiteCopy } from "@/server/db/repos/siteCopy";
 import { formatMoney } from "@/lib/money";
 import { Avatar } from "@/components/Avatar";
 import { LandingFx } from "@/components/LandingFx";
@@ -15,21 +16,21 @@ interface CoachCardData {
   rating?: CoachRating;
 }
 
-const TICKER_ITEMS = [
-  "VOD REVIEW",
-  "LIVE DUO",
-  "RANK UP",
-  "AIM AUDIT",
-  "MACRO FIX",
-  "NO VIBES, JUST WINS",
-  "PRIVATE DISCORD",
-  "REAL FEEDBACK",
-];
-
 export default async function Home() {
   const session = await auth();
   const signedIn = Boolean(session?.user);
   const siteName = await getSiteName();
+  const copy = await getSiteCopy();
+
+  const tickerItems = copy["ticker.items"]
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const steps = [1, 2, 3].map((n) => ({
+    tag: copy[`how.step${n}.tag` as keyof typeof copy],
+    title: copy[`how.step${n}.title` as keyof typeof copy],
+    body: copy[`how.step${n}.body` as keyof typeof copy],
+  }));
 
   const coaches = await listCoaches();
   const ratings = await getCoachRatings(coaches.map((c) => c.userId));
@@ -63,10 +64,10 @@ export default async function Home() {
         </span>
         <div className="nav-actions">
           <a href="#how" className="nav-ghost">
-            game plan
+            {copy["nav.gameplan"]}
           </a>
           <a href="#coaches" className="nav-ghost">
-            roster
+            {copy["nav.roster"]}
           </a>
           {signedIn ? (
             <Link className="btn-primary" href="/dashboard">
@@ -75,10 +76,10 @@ export default async function Home() {
           ) : (
             <Link
               className="btn-primary"
-              href="/api/auth/signin?callbackUrl=/dashboard"
+              href="/signin?callbackUrl=/dashboard"
               prefetch={false}
             >
-              sign in with discord
+              {copy["nav.signin"]}
             </Link>
           )}
         </div>
@@ -86,20 +87,16 @@ export default async function Home() {
 
       {/* hero */}
       <section className="hero hud-frame">
-        <span className="eyebrow">
-          [ for players done being hardstuck ]
-        </span>
+        <span className="eyebrow">{copy["hero.eyebrow"]}</span>
         <h1 className="hero-title">
-          <span data-decode>Stop coping.</span>
+          <span data-decode>{copy["hero.title1"]}</span>
           <br />
           <span className="volt" data-decode>
-            Start climbing.
+            {copy["hero.title2"]}
           </span>
         </h1>
         <p className="hero-sub" data-reveal="1">
-          Book 1-on-1 sessions with top-ranked coaches across your favorite
-          games. VOD reviews, live duos, and a plan that actually moves your
-          rank — not vibes.
+          {copy["hero.sub"]}
         </p>
         <div className="cta-row" data-reveal="2">
           <Link
@@ -107,14 +104,14 @@ export default async function Home() {
             href={
               signedIn
                 ? "/dashboard/coaches"
-                : "/api/auth/signin?callbackUrl=/dashboard"
+                : "/signin?callbackUrl=/dashboard"
             }
             prefetch={false}
           >
-            {signedIn ? "find a coach" : "get started — free to browse"}
+            {signedIn ? "find a coach" : copy["hero.cta"]}
           </Link>
           <a href="#how" className="btn-ghost lg">
-            see the game plan
+            {copy["hero.cta2"]}
           </a>
         </div>
         <div className="hero-readout" data-reveal="3">
@@ -133,7 +130,7 @@ export default async function Home() {
       {/* marquee ticker */}
       <div className="ticker" aria-hidden="true">
         <div className="ticker-track">
-          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+          {[...tickerItems, ...tickerItems].map((item, i) => (
             <span key={i}>
               {item} <em>//</em>
             </span>
@@ -145,27 +142,11 @@ export default async function Home() {
       <section id="how" className="section">
         <div className="section-head" data-reveal="0">
           <span className="section-no">01</span>
-          <h2 className="section-title">The game plan</h2>
+          <h2 className="section-title">{copy["how.title"]}</h2>
         </div>
         <div className="steps">
-          {[
-            [
-              "lock in",
-              "Find your coach",
-              "Filter by game and pick a verified, top-ranked coach who fits your goals.",
-            ],
-            [
-              "queue up",
-              "Book a session",
-              "Secure Stripe checkout. A private Discord channel spins up for the two of you.",
-            ],
-            [
-              "rank up",
-              "Level up",
-              "VOD breakdowns, live coaching, and homework. Then rate your session.",
-            ],
-          ].map(([tag, title, body], i) => (
-            <div key={tag} className="step" data-reveal={i + 1}>
+          {steps.map(({ tag, title, body }, i) => (
+            <div key={i} className="step" data-reveal={i + 1}>
               <div className="step-tag">
                 <span className="step-n">{String(i + 1).padStart(2, "0")}</span>
                 {tag}
@@ -181,10 +162,10 @@ export default async function Home() {
       <section id="coaches" className="section">
         <div className="section-head" data-reveal="0">
           <span className="section-no">02</span>
-          <h2 className="section-title">The roster</h2>
+          <h2 className="section-title">{copy["roster.title"]}</h2>
         </div>
         {games.length === 0 && (
-          <p className="muted">No coaches listed yet — check back soon.</p>
+          <p className="muted">{copy["roster.empty"]}</p>
         )}
         {games.map((game) => (
           <div key={game} className="game-block">
@@ -239,7 +220,7 @@ export default async function Home() {
                         href={
                           signedIn
                             ? `/dashboard/coaches/${coach.userId}`
-                            : `/api/auth/signin?callbackUrl=/dashboard/coaches/${coach.userId}`
+                            : `/signin?callbackUrl=/dashboard/coaches/${coach.userId}`
                         }
                         prefetch={false}
                       >
@@ -256,7 +237,7 @@ export default async function Home() {
 
       <footer className="landing-footer">
         <span className="muted">
-          ⚡ {siteName} — open-source, self-hosted coaching.
+          ⚡ {siteName} — {copy["footer.tagline"]}
         </span>
         <a
           className="muted"

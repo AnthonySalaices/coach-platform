@@ -44,6 +44,9 @@ export default async function DashboardLayout({
 
       <div className="shell">
         <nav className="sidebar">
+          <Link className="nav-link nav-link-exit" href="/">
+            ← Main site
+          </Link>
           <Link className="nav-link" href="/dashboard">
             Overview
           </Link>

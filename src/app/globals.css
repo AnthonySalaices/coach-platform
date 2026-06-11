@@ -278,6 +278,17 @@ body.no-cursor button {
   background: var(--surface-2);
   border-left-color: var(--accent);
 }
+.nav-link-exit {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.6rem;
+  border-radius: 0;
+}
+.nav-link-exit:hover {
+  color: var(--fg);
+}
 .content {
   flex: 1;
   padding: 1.5rem 1.75rem;
@@ -518,6 +529,38 @@ textarea.input {
 .slot-btn:hover {
   border-color: var(--accent);
   background: var(--accent-dim);
+}
+
+/* ── admin site-copy editor ─────────────────────────────────────────────── */
+.copy-head {
+  font-size: 1.15rem;
+  text-transform: uppercase;
+  margin: 2rem 0 0.25rem;
+}
+.copy-card {
+  margin-bottom: 1rem;
+}
+.copy-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.copy-card-head strong {
+  font-family: var(--font-display), sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.copy-saved {
+  color: var(--green);
+  font-family: var(--font-mono), monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.copy-help {
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 /* ── public landing ─────────────────────────────────────────────────────── */
@@ -923,6 +966,122 @@ textarea.input {
 }
 .coach-price strong {
   color: var(--fg);
+}
+
+/* ── sign-in ────────────────────────────────────────────────────────────── */
+.signin-root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.signin-root .landing-nav {
+  width: 100%;
+}
+.signin-brand {
+  color: var(--fg);
+  text-decoration: none;
+}
+.signin-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem 4rem;
+}
+.signin-panel {
+  position: relative;
+  width: min(440px, 100%);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 2.4rem 2.2rem 2rem;
+  clip-path: var(--notch);
+}
+.signin-title {
+  font-size: 2.1rem;
+  text-transform: uppercase;
+  margin: 0.8rem 0 0.6rem;
+}
+.signin-sub {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0 0 1.6rem;
+}
+.signin-sub strong {
+  color: var(--fg);
+}
+.signin-error {
+  border: 1px solid #6b2530;
+  background: rgba(255, 93, 108, 0.08);
+  color: var(--red);
+  font-size: 0.88rem;
+  padding: 0.6rem 0.8rem;
+  margin: 0 0 1.2rem;
+}
+.btn-discord {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  background: #5865f2;
+  color: #fff;
+  border: none;
+  padding: 0.85rem 1.2rem;
+  font-family: var(--font-display), sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  clip-path: var(--notch);
+  transition:
+    filter 0.15s ease,
+    transform 0.12s ease,
+    box-shadow 0.2s ease;
+}
+.btn-discord:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(88, 101, 242, 0.35);
+}
+.discord-mark {
+  width: 22px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.signin-trust {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 1.1rem 0 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.signin-trust .ok {
+  color: var(--green);
+  margin-right: 0.35rem;
+}
+.signin-trust .no {
+  color: var(--red);
+  margin-right: 0.35rem;
+}
+.signin-foot {
+  margin-top: 1.4rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-align: center;
 }
 
 .landing-footer {

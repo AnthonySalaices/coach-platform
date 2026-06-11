@@ -41,6 +41,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   secret: env.AUTH_SECRET,
   trustHost: env.AUTH_TRUST_HOST,
+  // Branded intermediate screen instead of Auth.js's bare default (which reads
+  // as phishing). Failed attempts land back here with ?error=<code>.
+  pages: { signIn: "/signin" },
   // Stateless sessions: the (encrypted) JWT carries identity + role, so there's
   // no per-request session-table read and any number of instances can serve.
   session: { strategy: "jwt" },

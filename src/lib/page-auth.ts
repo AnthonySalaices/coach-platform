@@ -8,7 +8,7 @@ export type { PageUser };
 export async function getIdentity(): Promise<Identity> {
   const identity = await resolveIdentity();
   if (!identity) {
-    redirect("/api/auth/signin?callbackUrl=/dashboard");
+    redirect("/signin?callbackUrl=/dashboard");
   }
   return identity;
 }

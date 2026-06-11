@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, Saira, Share_Tech_Mono } from "next/font/google";
 import { getSiteName } from "@/server/db/repos/settings";
+import { getSiteCopy } from "@/server/db/repos/siteCopy";
 import "./globals.css";
 
 const display = Chakra_Petch({
@@ -21,9 +22,10 @@ const mono = Share_Tech_Mono({
 
 export async function generateMetadata(): Promise<Metadata> {
   const name = await getSiteName();
+  const copy = await getSiteCopy();
   return {
     title: { default: name, template: `%s · ${name}` },
-    description: "Self-hostable coaching for gamers — book top coaches, climb.",
+    description: copy["meta.description"],
   };
 }
 
