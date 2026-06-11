@@ -36,7 +36,14 @@ export function getDiscordClient(): Promise<Client> {
         console.error("[discord] client error:", err),
       );
 
+      // Wait for the gateway READY, not just the login: guilds are only
+      // fully hydrated (name, roles, @everyone) in the gateway cache —
+      // REST-fetched Guild objects come back partial in discord.js 14.26.
+      const ready = new Promise<void>((resolve) =>
+        client.once(Events.ClientReady, () => resolve()),
+      );
       await client.login(env.DISCORD_BOT_TOKEN);
+      await ready;
       console.log(`[discord] bot logged in as ${client.user?.tag}`);
       return client;
     })();

@@ -9,7 +9,7 @@
   --fg: #e9efe2;
   --muted: #93a08a;
   --accent: #c9f73a; /* volt */
-  --accent-dim: rgba(201, 247, 58, 0.14);
+  --accent-dim: color-mix(in srgb, var(--accent) 14%, transparent);
   --accent-2: #59e3ea; /* intel cyan */
   --surface: #0c100a;
   --surface-2: #131910;
@@ -48,12 +48,12 @@ body {
   background-image:
     radial-gradient(
       900px 540px at 85% -10%,
-      rgba(201, 247, 58, 0.05),
+      color-mix(in srgb, var(--accent) 5%, transparent),
       transparent 60%
     ),
     radial-gradient(
       700px 520px at -10% 20%,
-      rgba(89, 227, 234, 0.04),
+      color-mix(in srgb, var(--accent-2) 4%, transparent),
       transparent 55%
     );
   background-attachment: fixed;
@@ -588,6 +588,85 @@ textarea.input {
 .brand-bolt {
   color: var(--accent);
 }
+.brand-logo {
+  height: 1.35em;
+  width: auto;
+  max-width: 160px;
+  vertical-align: -0.3em;
+  object-fit: contain;
+}
+
+/* admin discord demo */
+.demo-banner {
+  max-width: 640px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+}
+.demo-banner.ok {
+  color: var(--green);
+  border-color: #1f5740;
+  background: rgba(69, 192, 138, 0.07);
+}
+.demo-banner.err {
+  color: var(--red);
+  border-color: #6b2530;
+  background: rgba(255, 93, 108, 0.07);
+}
+.demo-blurb {
+  font-size: 0.88rem;
+  margin: 0.5rem 0 0.9rem;
+}
+.demo-state {
+  margin: 0.7rem 0 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.8rem;
+}
+.demo-steps .btn-primary:disabled,
+.demo-steps .btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* admin branding editor */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 0.7rem 1rem;
+}
+.color-grid label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+.color-grid input[type="color"] {
+  width: 44px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.logo-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.logo-preview img {
+  height: 40px;
+  width: auto;
+  max-width: 220px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  background: var(--surface-2);
+}
 .nav-actions {
   display: flex;
   align-items: center;
@@ -627,7 +706,7 @@ textarea.input {
 .btn-primary:hover {
   filter: brightness(1.12);
   transform: translateY(-2px);
-  box-shadow: 0 6px 28px rgba(201, 247, 58, 0.25);
+  box-shadow: 0 6px 28px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .btn-primary.lg {
   padding: 0.85rem 1.6rem;
@@ -685,7 +764,7 @@ textarea.input {
   position: absolute;
   width: 26px;
   height: 26px;
-  border: 1px solid rgba(201, 247, 58, 0.5);
+  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   pointer-events: none;
 }
 .hud-frame::before {
@@ -717,7 +796,7 @@ textarea.input {
 }
 .hero-title .volt {
   color: var(--accent);
-  text-shadow: 0 0 38px rgba(201, 247, 58, 0.35);
+  text-shadow: 0 0 38px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 .hero-sub {
   font-size: 1.12rem;
@@ -902,7 +981,7 @@ textarea.input {
 .coach-card:hover {
   border-color: var(--accent);
   transform: translateY(-3px);
-  box-shadow: 0 10px 36px rgba(201, 247, 58, 0.08);
+  box-shadow: 0 10px 36px color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .coach-card-top {
   display: flex;
@@ -933,7 +1012,7 @@ textarea.input {
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--accent-2);
-  border: 1px solid rgba(89, 227, 234, 0.35);
+  border: 1px solid color-mix(in srgb, var(--accent-2) 35%, transparent);
   padding: 0.1rem 0.45rem;
 }
 .coach-games {

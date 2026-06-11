@@ -145,9 +145,11 @@ Dockerfile · docker-compose.yml · Caddyfile · .env.example
     enqueues `discord.sessionStart` with `runAt = start_at`.
   - The button (customId `cp:addclient:<bookingId>`, handled in
     `discord/interactions.ts` via the gateway) lets **only the coach** open the
-    channel to the client early. Overwrites are created from a fetched `User`, so
-    they work before the client joins the guild; if the client isn't a member yet
-    the coach gets an ephemeral one-off **invite link** to pass along.
+    channel to the client early. **Discord silently drops overwrites for users
+    who aren't guild members** (on create and edit alike — verified), so access
+    can't be pre-staged: a non-member client gets the coach an ephemeral **invite
+    link** instead, the button stays pressable, and the next press (or session
+    start) grants text+voice access once they've joined.
   - `discord.sessionStart` (at start time; skips cancelled/refunded or already-ended
     bookings): ensures client access, creates a **private voice channel** (reused on
     retry via `bookings.discord_voice_channel_id`), pings both participants with a

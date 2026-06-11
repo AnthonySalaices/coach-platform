@@ -226,6 +226,19 @@ export async function setBookingDiscordChannel(
     .where(eq(bookings.id, id));
 }
 
+export async function setBookingTimes(
+  id: string,
+  startAt: Date,
+  endAt: Date,
+): Promise<void> {
+  await db.update(bookings).set({ startAt, endAt }).where(eq(bookings.id, id));
+}
+
+/** Hard delete — only for the admin Discord demo's throwaway booking. */
+export async function deleteBooking(id: string): Promise<void> {
+  await db.delete(bookings).where(eq(bookings.id, id));
+}
+
 export async function setBookingDiscordVoiceChannel(
   id: string,
   discordVoiceChannelId: string | null,

@@ -4,6 +4,7 @@ import {
   ButtonStyle,
   ChannelType,
   EmbedBuilder,
+  OverwriteType,
   PermissionFlagsBits,
   type Guild,
   type GuildBasedChannel,
@@ -28,7 +29,17 @@ async function getGuild(): Promise<Guild> {
     throw new Error("DISCORD_GUILD_ID is not set.");
   }
   const client = await getDiscordClient();
-  return client.guilds.fetch(env.DISCORD_GUILD_ID);
+  // Cache first: the gateway copy is fully hydrated (roles, @everyone),
+  // unlike REST-fetched guilds in discord.js 14.26.
+  const cached = client.guilds.cache.get(env.DISCORD_GUILD_ID);
+  if (cached) return cached;
+  const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID);
+  if (!guild.name) {
+    throw new Error(
+      `Guild ${env.DISCORD_GUILD_ID} not in bot cache — is the bot actually a member of that server?`,
+    );
+  }
+  return guild;
 }
 
 function shortId(bookingId: string): string {
@@ -64,42 +75,64 @@ function bookingEmbed(booking: BookingDiscordInfo): EmbedBuilder {
 }
 
 /** Overwrites for a private session channel: invisible to everyone, full
- * access for the bot, and view/chat for each present participant. */
-function sessionOverwrites(
+ * access for the bot, and view/chat for each present participant.
+ *
+ * Discord only lets you grant overwrite permissions you hold yourself, so
+ * everything is filtered to the bot's own guild permissions — an under-scoped
+ * bot invite degrades gracefully (e.g. no AttachFiles) instead of erroring. */
+async function sessionOverwrites(
   guild: Guild,
   participantIds: (string | null)[],
   voice: boolean,
 ) {
-  const participantAllow = voice
-    ? [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.Connect,
-        PermissionFlagsBits.Speak,
-        PermissionFlagsBits.Stream,
-      ]
-    : [
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-        PermissionFlagsBits.ReadMessageHistory,
-        PermissionFlagsBits.AttachFiles,
-        PermissionFlagsBits.EmbedLinks,
-      ];
+  const botPerms = (await guild.members.fetchMe()).permissions;
+  const held = (flags: bigint[]) => flags.filter((f) => botPerms.has(f));
+
+  const participantAllow = held(
+    voice
+      ? [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.Connect,
+          PermissionFlagsBits.Speak,
+          PermissionFlagsBits.Stream,
+        ]
+      : [
+          PermissionFlagsBits.ViewChannel,
+          PermissionFlagsBits.SendMessages,
+          PermissionFlagsBits.ReadMessageHistory,
+          PermissionFlagsBits.AttachFiles,
+          PermissionFlagsBits.EmbedLinks,
+        ],
+  );
   return [
-    { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+    {
+      id: guild.roles.everyone.id,
+      type: OverwriteType.Role,
+      deny: [PermissionFlagsBits.ViewChannel],
+    },
     {
       id: guild.client.user.id,
-      allow: [
+      type: OverwriteType.Member,
+      // No ManageRoles here: Discord only allows it inside an overwrite when
+      // the setter has Administrator (verified: instant 50013 otherwise). The
+      // bot's guild-level ManageRoles already covers overwrite management.
+      allow: held([
         PermissionFlagsBits.ViewChannel,
         PermissionFlagsBits.SendMessages,
         PermissionFlagsBits.ManageChannels,
-        PermissionFlagsBits.ManageRoles,
         PermissionFlagsBits.CreateInstantInvite,
         ...(voice ? [PermissionFlagsBits.Connect] : []),
-      ],
+      ]),
     },
+    // Raw snowflakes need an explicit type — discord.js can't infer
+    // member-vs-role for users it hasn't cached (e.g. not in the guild yet).
     ...participantIds
       .filter((id): id is string => Boolean(id))
-      .map((id) => ({ id, allow: participantAllow })),
+      .map((id) => ({
+        id,
+        type: OverwriteType.Member,
+        allow: participantAllow,
+      })),
   ];
 }
 
@@ -117,7 +150,7 @@ export async function provisionSessionChannel(
     type: ChannelType.GuildText,
     parent: env.DISCORD_SESSIONS_CATEGORY_ID ?? null,
     reason: `Coaching session ${booking.id}`,
-    permissionOverwrites: sessionOverwrites(
+    permissionOverwrites: await sessionOverwrites(
       guild,
       [booking.coachDiscordId],
       false,
@@ -163,52 +196,40 @@ async function fetchSessionChannel(
     : null;
 }
 
+export type AddClientResult =
+  | { status: "added" }
+  | { status: "already" }
+  | { status: "pendingJoin"; inviteUrl?: string }
+  | { status: "error"; reason: string };
+
 /**
- * Grant the client access to the session text channel. Returns what happened
- * so callers can phrase their reply; `inviteUrl` is set when the client isn't
- * in the guild yet and needs an invite to actually get in.
+ * Grant the client access to the session channels. Discord SILENTLY DROPS
+ * permission overwrites for users who aren't guild members (verified — on
+ * create and edit alike), so access can't be pre-staged: if the client hasn't
+ * joined the guild we return an invite instead, and a later call (button
+ * re-press or session start) grants the overwrites once they're in.
  */
 export async function addClientToSessionChannel(
   booking: BookingDiscordInfo,
   opts: { announce: boolean },
-): Promise<
-  | { ok: true; alreadyAdded: boolean; inviteUrl?: string }
-  | { ok: false; reason: string }
-> {
+): Promise<AddClientResult> {
   if (!booking.clientDiscordId) {
     return {
-      ok: false,
+      status: "error",
       reason: "The client has no linked Discord account yet.",
     };
   }
   const guild = await getGuild();
   const channel = await fetchSessionChannel(guild, booking.discordChannelId);
   if (!channel) {
-    return { ok: false, reason: "The session channel no longer exists." };
+    return { status: "error", reason: "The session channel no longer exists." };
   }
 
-  const alreadyAdded = channel.permissionOverwrites.cache.has(
-    booking.clientDiscordId,
-  );
-  if (!alreadyAdded) {
-    // Resolve a full User first — overwrites accept users who haven't joined
-    // the guild yet, and the perms kick in the moment they do.
-    const user = await guild.client.users.fetch(booking.clientDiscordId);
-    await channel.permissionOverwrites.create(user, {
-      ViewChannel: true,
-      SendMessages: true,
-      ReadMessageHistory: true,
-      AttachFiles: true,
-      EmbedLinks: true,
-    });
-  }
-
-  // If they're not in the guild yet, mint an invite the coach can pass along.
-  let inviteUrl: string | undefined;
   const member = await guild.members
     .fetch(booking.clientDiscordId)
     .catch(() => null);
   if (!member) {
+    // Not in the guild — mint an invite the coach can pass along.
     const secondsUntilEnd = Math.max(
       3600,
       Math.floor((booking.endAt.getTime() - Date.now()) / 1000),
@@ -221,7 +242,52 @@ export async function addClientToSessionChannel(
         reason: `Session invite for booking ${booking.id}`,
       })
       .catch(() => null);
-    inviteUrl = invite?.url;
+    return { status: "pendingJoin", inviteUrl: invite?.url };
+  }
+
+  // Grant only permissions the bot itself holds (Discord rejects the rest).
+  const botPerms = (await guild.members.fetchMe()).permissions;
+  const held = (
+    entries: readonly (readonly [string, bigint])[],
+  ): Record<string, boolean> =>
+    Object.fromEntries(
+      entries.filter(([, flag]) => botPerms.has(flag)).map(([n]) => [n, true]),
+    );
+
+  const alreadyAdded = channel.permissionOverwrites.cache.has(member.id);
+  if (!alreadyAdded) {
+    await channel.permissionOverwrites.create(
+      member,
+      held([
+        ["ViewChannel", PermissionFlagsBits.ViewChannel],
+        ["SendMessages", PermissionFlagsBits.SendMessages],
+        ["ReadMessageHistory", PermissionFlagsBits.ReadMessageHistory],
+        ["AttachFiles", PermissionFlagsBits.AttachFiles],
+        ["EmbedLinks", PermissionFlagsBits.EmbedLinks],
+      ] as const),
+    );
+  }
+
+  // If the session voice channel already exists (late join after kickoff),
+  // make sure they can get into that too.
+  if (booking.discordVoiceChannelId) {
+    const voice = await guild.channels
+      .fetch(booking.discordVoiceChannelId)
+      .catch(() => null);
+    if (
+      voice?.type === ChannelType.GuildVoice &&
+      !voice.permissionOverwrites.cache.has(member.id)
+    ) {
+      await voice.permissionOverwrites.create(
+        member,
+        held([
+          ["ViewChannel", PermissionFlagsBits.ViewChannel],
+          ["Connect", PermissionFlagsBits.Connect],
+          ["Speak", PermissionFlagsBits.Speak],
+          ["Stream", PermissionFlagsBits.Stream],
+        ] as const),
+      );
+    }
   }
 
   if (opts.announce && !alreadyAdded) {
@@ -236,7 +302,7 @@ export async function addClientToSessionChannel(
     });
   }
 
-  return { ok: true, alreadyAdded, inviteUrl };
+  return { status: alreadyAdded ? "already" : "added" };
 }
 
 /**
@@ -251,6 +317,7 @@ export async function startSession(booking: BookingDiscordInfo): Promise<void> {
   }
 
   // Let the client in (no announcement — the kickoff message covers it).
+  // If they haven't joined the guild, this yields an invite to relay instead.
   const added = await addClientToSessionChannel(booking, { announce: false });
 
   // Voice channel, visible only to the two of them (+ bot). Idempotent: reuse
@@ -270,7 +337,7 @@ export async function startSession(booking: BookingDiscordInfo): Promise<void> {
       type: ChannelType.GuildVoice,
       parent: env.DISCORD_SESSIONS_CATEGORY_ID ?? null,
       reason: `Voice for coaching session ${booking.id}`,
-      permissionOverwrites: sessionOverwrites(
+      permissionOverwrites: await sessionOverwrites(
         guild,
         [booking.coachDiscordId, booking.clientDiscordId],
         true,
@@ -294,14 +361,32 @@ export async function startSession(booking: BookingDiscordInfo): Promise<void> {
           `Hop in: <#${voice.id}>\n\n` +
             `Only the two of you can see it. It closes a while after the ` +
             `session ends (<t:${Math.floor(booking.endAt.getTime() / 1000)}:t>).` +
-            (added.ok && added.inviteUrl
+            (added.status === "pendingJoin"
               ? `\n\n⚠️ ${booking.clientName ?? "The client"} hasn't joined ` +
-                `this server yet — send them this invite: ${added.inviteUrl}`
+                `this server yet — once they have, hit the button on the ` +
+                `booking message and I'll let them into both channels.` +
+                (added.inviteUrl
+                  ? `\nInvite to send them: ${added.inviteUrl}`
+                  : "")
               : ""),
         )
         .setFooter({ text: `Booking ${shortId(booking.id)}` }),
     ],
   });
+}
+
+/** Delete both session channels outright (admin demo reset). */
+export async function deleteSessionChannels(
+  booking: BookingDiscordInfo,
+): Promise<void> {
+  const guild = await getGuild();
+  for (const id of [booking.discordVoiceChannelId, booking.discordChannelId]) {
+    if (!id) continue;
+    const channel = await guild.channels.fetch(id).catch(() => null);
+    await channel?.delete(`Demo reset for booking ${booking.id}`).catch(() => {
+      /* already gone / not deletable — fine for a demo teardown */
+    });
+  }
 }
 
 /**

@@ -7,6 +7,7 @@ import { getSiteName } from "@/server/db/repos/settings";
 import { getSiteCopy } from "@/server/db/repos/siteCopy";
 import { formatMoney } from "@/lib/money";
 import { Avatar } from "@/components/Avatar";
+import { Brand } from "@/components/Brand";
 import { LandingFx } from "@/components/LandingFx";
 import type { Service } from "@/server/db/schema";
 
@@ -60,7 +61,7 @@ export default async function Home() {
 
       <nav className="landing-nav">
         <span className="brand">
-          <span className="brand-bolt">⚡</span> {siteName}
+          <Brand />
         </span>
         <div className="nav-actions">
           <a href="#how" className="nav-ghost">

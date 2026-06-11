@@ -181,7 +181,11 @@ export function LandingFx() {
       camera.position.set(0, 0.6, 6);
       camera.lookAt(0, 0.8, 0);
 
-      const volt = new THREE.Color(0.78, 0.97, 0.23);
+      // Follow the (possibly admin-overridden) brand accent.
+      const accentHex = getComputedStyle(document.documentElement)
+        .getPropertyValue("--accent")
+        .trim();
+      const volt = new THREE.Color(accentHex || "#c9f73a");
 
       const COUNT = 1200;
       const pos = new Float32Array(COUNT * 3);

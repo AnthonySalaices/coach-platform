@@ -36,6 +36,10 @@ async function tick(): Promise<void> {
         await runHandler(job);
         await completeJob(job.id);
       } catch (err) {
+        console.error(
+          `[jobs] ${job.type} (${job.id}) attempt ${job.attempts} failed:`,
+          err,
+        );
         await failJob(job, err instanceof Error ? err.message : String(err));
       }
     }

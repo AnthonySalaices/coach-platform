@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/server/auth";
-import { getSiteName } from "@/server/db/repos/settings";
 import { getSiteCopy } from "@/server/db/repos/siteCopy";
+import { Brand } from "@/components/Brand";
 
 export const metadata = { title: "Sign in" };
 
@@ -33,7 +33,6 @@ export default async function SignInPage({
   const session = await auth();
   if (session?.user) redirect(redirectTo);
 
-  const siteName = await getSiteName();
   const copy = await getSiteCopy();
   const errorMessage = error
     ? (ERROR_COPY[error] ?? "Something went wrong during sign-in. Try again.")
@@ -43,7 +42,7 @@ export default async function SignInPage({
     <div className="signin-root">
       <nav className="landing-nav">
         <Link href="/" className="brand signin-brand">
-          <span className="brand-bolt">⚡</span> {siteName}
+          <Brand />
         </Link>
         <Link href="/" className="nav-ghost">
           ← back to site

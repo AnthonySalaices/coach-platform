@@ -62,9 +62,26 @@ async function handleAddClientButton(
 
   const result = await addClientToSessionChannel(booking, { announce: true });
 
-  if (!result.ok) {
+  if (result.status === "error") {
     await interaction.reply({
       content: `Couldn't add them: ${result.reason}`,
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (result.status === "pendingJoin") {
+    // Can't grant access until they're a guild member (Discord silently
+    // drops overwrites for non-members) — leave the button active so the
+    // coach can press it again once they've joined.
+    await interaction.reply({
+      content:
+        `${booking.clientName ?? "The client"} isn't in this server yet, so ` +
+        `I can't open the channel for them. ` +
+        (result.inviteUrl
+          ? `Send them this invite, then hit the button again once they've ` +
+            `joined: ${result.inviteUrl}`
+          : `Get them to join the server, then hit the button again.`),
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -83,14 +100,7 @@ async function handleAddClientButton(
     ],
   });
 
-  if (result.inviteUrl) {
-    await interaction.followUp({
-      content:
-        `They have channel access, but they're not in this server yet. ` +
-        `Send them this invite so they can actually get in: ${result.inviteUrl}`,
-      flags: MessageFlags.Ephemeral,
-    });
-  } else if (result.alreadyAdded) {
+  if (result.status === "already") {
     await interaction.followUp({
       content: "They already had access — you're all set.",
       flags: MessageFlags.Ephemeral,
