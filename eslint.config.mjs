@@ -8,7 +8,7 @@ import prettier from "eslint-config-prettier";
 // circular-structure error from the bundled React config.)
 export default tseslint.config(
   {
-    ignores: [".next/**", "node_modules/**", "drizzle/**", "next-env.d.ts"],
+    ignores: [".next/**", "node_modules/**", "drizzle/**", "next-env.d.ts", ".qa/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

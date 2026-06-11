@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { Chakra_Petch, Saira, Share_Tech_Mono } from "next/font/google";
 import { getSiteName } from "@/server/db/repos/settings";
 import "./globals.css";
 
-const display = Space_Grotesk({
+const display = Chakra_Petch({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-display",
 });
-const body = Inter({ subsets: ["latin"], variable: "--font-body" });
+const body = Saira({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-body",
+});
+const mono = Share_Tech_Mono({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-mono",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const name = await getSiteName();
@@ -22,7 +31,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html
+      lang="en"
+      className={`${display.variable} ${body.variable} ${mono.variable}`}
+    >
       <body>{children}</body>
     </html>
   );

@@ -6,6 +6,7 @@ import { getCoachRatings, type CoachRating } from "@/server/db/repos/reviews";
 import { getSiteName } from "@/server/db/repos/settings";
 import { formatMoney } from "@/lib/money";
 import { Avatar } from "@/components/Avatar";
+import { LandingFx } from "@/components/LandingFx";
 import type { Service } from "@/server/db/schema";
 
 interface CoachCardData {
@@ -13,6 +14,17 @@ interface CoachCardData {
   services: Service[];
   rating?: CoachRating;
 }
+
+const TICKER_ITEMS = [
+  "VOD REVIEW",
+  "LIVE DUO",
+  "RANK UP",
+  "AIM AUDIT",
+  "MACRO FIX",
+  "NO VIBES, JUST WINS",
+  "PRIVATE DISCORD",
+  "REAL FEEDBACK",
+];
 
 export default async function Home() {
   const session = await auth();
@@ -42,18 +54,23 @@ export default async function Home() {
   const games = [...byGame.keys()].sort();
 
   return (
-    <div>
+    <div className="landing-root">
+      <LandingFx />
+
       <nav className="landing-nav">
         <span className="brand">
-          <span style={{ color: "var(--accent)" }}>⚡</span> {siteName}
+          <span className="brand-bolt">⚡</span> {siteName}
         </span>
         <div className="nav-actions">
+          <a href="#how" className="nav-ghost">
+            game plan
+          </a>
           <a href="#coaches" className="nav-ghost">
-            Browse coaches
+            roster
           </a>
           {signedIn ? (
             <Link className="btn-primary" href="/dashboard">
-              Dashboard →
+              dashboard →
             </Link>
           ) : (
             <Link
@@ -61,54 +78,98 @@ export default async function Home() {
               href="/api/auth/signin?callbackUrl=/dashboard"
               prefetch={false}
             >
-              Sign in with Discord
+              sign in with discord
             </Link>
           )}
         </div>
       </nav>
 
       {/* hero */}
-      <section className="hero">
-        <span className="eyebrow">for players who are done being hardstuck</span>
+      <section className="hero hud-frame">
+        <span className="eyebrow">
+          [ for players done being hardstuck ]
+        </span>
         <h1 className="hero-title">
-          Stop coping.
+          <span data-decode>Stop coping.</span>
           <br />
-          Start climbing.
+          <span className="volt" data-decode>
+            Start climbing.
+          </span>
         </h1>
-        <p className="hero-sub">
+        <p className="hero-sub" data-reveal="1">
           Book 1-on-1 sessions with top-ranked coaches across your favorite
           games. VOD reviews, live duos, and a plan that actually moves your
           rank — not vibes.
         </p>
-        <div className="cta-row">
+        <div className="cta-row" data-reveal="2">
           <Link
             className="btn-primary lg"
-            href={signedIn ? "/dashboard/coaches" : "/api/auth/signin?callbackUrl=/dashboard"}
+            href={
+              signedIn
+                ? "/dashboard/coaches"
+                : "/api/auth/signin?callbackUrl=/dashboard"
+            }
             prefetch={false}
           >
-            {signedIn ? "Find a coach" : "Get started — it's free to browse"}
+            {signedIn ? "find a coach" : "get started — free to browse"}
           </Link>
           <a href="#how" className="btn-ghost lg">
-            How it works
+            see the game plan
           </a>
         </div>
-        <div className="hero-trust">
-          {coaches.length} coaches · {games.length} games · pay securely with
-          Stripe
+        <div className="hero-readout" data-reveal="3">
+          <span>
+            coaches <strong>{String(coaches.length).padStart(2, "0")}</strong>
+          </span>
+          <span>
+            games <strong>{String(games.length).padStart(2, "0")}</strong>
+          </span>
+          <span>
+            payments <strong>stripe secured</strong>
+          </span>
         </div>
       </section>
 
+      {/* marquee ticker */}
+      <div className="ticker" aria-hidden="true">
+        <div className="ticker-track">
+          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+            <span key={i}>
+              {item} <em>//</em>
+            </span>
+          ))}
+        </div>
+      </div>
+
       {/* how it works */}
       <section id="how" className="section">
-        <h2 className="section-title">How it works</h2>
+        <div className="section-head" data-reveal="0">
+          <span className="section-no">01</span>
+          <h2 className="section-title">The game plan</h2>
+        </div>
         <div className="steps">
           {[
-            ["1", "Find your coach", "Filter by game and pick a verified, top-ranked coach who fits your goals."],
-            ["2", "Book a session", "Secure Stripe checkout. A private Discord channel spins up for the two of you."],
-            ["3", "Level up", "VOD breakdowns, live coaching, and homework. Then rate your session."],
-          ].map(([n, title, body]) => (
-            <div key={n} className="step">
-              <div className="step-n">{n}</div>
+            [
+              "lock in",
+              "Find your coach",
+              "Filter by game and pick a verified, top-ranked coach who fits your goals.",
+            ],
+            [
+              "queue up",
+              "Book a session",
+              "Secure Stripe checkout. A private Discord channel spins up for the two of you.",
+            ],
+            [
+              "rank up",
+              "Level up",
+              "VOD breakdowns, live coaching, and homework. Then rate your session.",
+            ],
+          ].map(([tag, title, body], i) => (
+            <div key={tag} className="step" data-reveal={i + 1}>
+              <div className="step-tag">
+                <span className="step-n">{String(i + 1).padStart(2, "0")}</span>
+                {tag}
+              </div>
               <strong>{title}</strong>
               <p className="muted">{body}</p>
             </div>
@@ -118,48 +179,39 @@ export default async function Home() {
 
       {/* coaches by game */}
       <section id="coaches" className="section">
-        <h2 className="section-title">Browse coaches by game</h2>
+        <div className="section-head" data-reveal="0">
+          <span className="section-no">02</span>
+          <h2 className="section-title">The roster</h2>
+        </div>
         {games.length === 0 && (
           <p className="muted">No coaches listed yet — check back soon.</p>
         )}
         {games.map((game) => (
           <div key={game} className="game-block">
-            <div className="game-head">
+            <div className="game-head" data-reveal="0">
               <span className="game-pill">{game}</span>
-              <span className="muted">{byGame.get(game)!.length} coaches</span>
+              <span className="game-count">
+                {byGame.get(game)!.length} coach
+                {byGame.get(game)!.length === 1 ? "" : "es"} active
+              </span>
             </div>
             <div className="coach-grid">
-              {byGame.get(game)!.map(({ coach, services, rating }) => {
+              {byGame.get(game)!.map(({ coach, services, rating }, i) => {
                 const from =
                   services.length > 0
                     ? Math.min(...services.map((s) => s.price))
                     : null;
                 const currency = services[0]?.currency ?? "usd";
                 return (
-                  <div className="coach-card" key={coach.userId}>
+                  <div
+                    className="coach-card"
+                    key={coach.userId}
+                    data-reveal={i % 3}
+                  >
                     <div className="coach-card-top">
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "0.6rem",
-                          minWidth: 0,
-                        }}
-                      >
-                        <Avatar
-                          name={coach.name}
-                          image={coach.image}
-                          size={40}
-                        />
-                        <strong
-                          style={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {coach.name}
-                        </strong>
+                      <div className="coach-id">
+                        <Avatar name={coach.name} image={coach.image} size={40} />
+                        <strong className="coach-name">{coach.name}</strong>
                       </div>
                       {rating ? (
                         <span className="stars" title={`${rating.avg.toFixed(1)}/5`}>
@@ -167,15 +219,13 @@ export default async function Home() {
                           <span className="muted">({rating.count})</span>
                         </span>
                       ) : (
-                        <span className="muted" style={{ fontSize: "0.78rem" }}>
-                          New
-                        </span>
+                        <span className="badge-new">new</span>
                       )}
                     </div>
                     <div className="coach-games">{coach.games.join(" · ")}</div>
                     {coach.bio && <p className="coach-bio">{coach.bio}</p>}
                     <div className="coach-card-foot">
-                      <span className="muted">
+                      <span className="coach-price">
                         {from != null ? (
                           <>
                             from <strong>{formatMoney(from, currency)}</strong>
@@ -193,7 +243,7 @@ export default async function Home() {
                         }
                         prefetch={false}
                       >
-                        {signedIn ? "View & book" : "Sign in to book"}
+                        {signedIn ? "view & book" : "sign in to book"}
                       </Link>
                     </div>
                   </div>
